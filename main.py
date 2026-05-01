@@ -28,7 +28,6 @@ transformations=transforms.Compose([
     
 ])
 dataset=Imageprocessor(root_dir_path,transformations)
-print(len(dataset))
 
 dataloader=DataLoader(dataset,batch_size=128,shuffle=True)
 
@@ -61,9 +60,40 @@ gen = Generator()
 z = torch.randn(16, 100)
 fake = gen(z)
 
-print(fake.shape)
-    
-        
+#Discriminator Implementation
+class Discriminator(nn.Module):
+    def __init__(self,img_channels=3):
+        super().__init__()
+        self.model=nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(64*64*img_channels,1024),
+            nn.LeakyReLU(0.2,inplace=True),
             
-        
-        
+            nn.Linear(1024,512),
+            nn.LeakyReLU(0.2,inplace=True),
+            
+            nn.Linear(512,256),
+            nn.LeakyReLU(0.2,inplace=True),
+            
+            nn.Linear(256,1),
+            nn.Sigmoid()
+        )
+    def forward(self,img):
+        return self.model(img)
+    
+GAN_loss=nn.BCELoss();
+gen=Generator()
+g_optimizer=optim.Adam(gen.parameters(),lr=0.0002,betas=(0.5,0.999))
+dis=Discriminator()
+d_optimizer=optim.Adam(dis.parameters(),lr=0.0002,betas=(0.5,0.999))
+
+if torch.backends.mps.is_available():
+    device=torch.device("mps")
+elif torch.cuda.is_available():
+    device=torch.device("cuda")
+else:
+    device=torch.device("cpu")
+print(device)
+            
+gen=gen.to(device)
+dis=dis.to(device)
