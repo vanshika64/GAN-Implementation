@@ -97,3 +97,57 @@ print(device)
             
 gen=gen.to(device)
 dis=dis.to(device)
+
+def train(generator,discriminator,dataloader,epochs=10):
+    for epoch in range(epochs):
+        for i,img in enumerate(dataloader):
+            real_img=img.to(device)
+            batch_size=real_img.size(0)
+            real_labels=torch.ones(batch_size,1).to(device)
+            fake_labels=torch.zeros(batch_size,1).to(device)
+            
+            #Train the Discriminator
+            d_optimizer.zero_grad()
+            fake_imgs=generator(torch.randn(batch_size,100)).to(device)
+            
+            real_loss=GAN_loss(discriminator(real_img),real_labels)
+            fake_loss=GAN_loss(discriminator(fake_imgs.detach()),fake_labels)
+            d_loss=(real_loss + fake_loss)/2
+            d_loss.backward()
+            d_optimizer.step()
+            
+            #Train the Generator
+            g_optimizer.zero_grad()
+            g_loss=GAN_loss(discriminator(fake_imgs),real_labels)
+            g_loss.backward()
+            g_optimizer.step()
+            
+            if i%50==0:
+                print(f"for epoch {epoch+1}/{epochs} batch:{i+1} G-Loss:{g_loss}  D-Loss:{d_loss}")
+            
+        save_generated_images(generator,epoch,device)
+
+import matplotlib.pyplot as plt
+import torchvision
+import numpy as np
+import torch
+
+def save_generated_images(generator, epoch, device, num_imgs=8):
+    generator.eval()  
+    with torch.no_grad(): 
+        z = torch.randn(num_imgs, 100).to(device)
+        generated_images = generator(z).cpu()
+        
+        generated_images = (generated_images + 1) / 2
+        
+        grid = torchvision.utils.make_grid(generated_images, nrow=4)
+        
+        plt.imshow(np.transpose(grid, (1, 2, 0)))
+        plt.title(f"Epoch: {epoch+1}")
+        plt.axis("off")
+        plt.show()
+    
+    generator.train()
+
+train(gen,dis,dataloader,epochs=5)
+            
